@@ -1,0 +1,71 @@
+# PRODUÇÃO - copiar para /opt/cartoes/docker-compose.yml na VPS (junto com o .env).
+# Projeto Compose separado do Commander (/opt/condominio): banco, volumes e deploys
+# independentes. Só o Traefik é compartilhado - os serviços públicos entram na rede dele.
+#
+# ⚠️ Conferir com o /opt/condominio/docker-compose.yml antes de subir:
+#   - nome da rede do Traefik (TRAEFIK_NETWORK no .env)
+#   - nome do entrypoint HTTPS ("websecure" abaixo) e do certresolver ("letsencrypt")
+# Copie os mesmos nomes que os labels do Commander usam.
+#
+# ⚠️ Nomes de serviço com prefixo "cartoes-" DE PROPÓSITO: o frontend entra na rede do
+# Traefik, onde também estão os containers do Commander. Se algum serviço daqui se chamasse
+# "backend", o DNS do Docker poderia resolver "backend" para o container errado - nos DOIS
+# sistemas. Pelo mesmo motivo o backend NÃO entra na rede do Traefik (sem Swagger público;
+# para usar o Swagger em produção, túnel SSH: ssh -L 8081:<ip-do-container>:8081 ...).
+name: cartoes
+
+services:
+  cartoes-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cartoes
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: cartoes_gestao
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [interna]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cartoes -d cartoes_gestao"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cartoes-backend:
+    container_name: cartoes-backend
+    image: ghcr.io/romulo88/gestao-cartoes-backend:latest
+    restart: unless-stopped
+    depends_on:
+      cartoes-db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://cartoes-db:5432/cartoes_gestao
+      DB_USER: cartoes
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: "8081"
+      APP_TIMEZONE: America/Sao_Paulo
+    networks: [interna]
+
+  cartoes-web:
+    container_name: cartoes-web
+    image: ghcr.io/romulo88/gestao-cartoes-web:latest
+    restart: unless-stopped
+    depends_on: [cartoes-backend]
+    networks: [interna, traefik]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK}
+      - traefik.http.routers.cartoes-web.rule=Host(`cartoes.romtechsolucoes.com.br`)
+      - traefik.http.routers.cartoes-web.entrypoints=websecure
+      - traefik.http.routers.cartoes-web.tls.certresolver=letsencrypt
+      - traefik.http.services.cartoes-web.loadbalancer.server.port=3000
+
+networks:
+  interna:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK}
+
+volumes:
+  postgres_data:

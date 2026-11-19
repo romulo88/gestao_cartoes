@@ -1,0 +1,9 @@
+# Backend
+backend/target/
+*.log
+.idea/
+*.iml
+.env
+
+# O frontend tem repositório próprio (gestao-cartoes-web), igual ao Commander
+frontend/

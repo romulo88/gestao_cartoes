@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: cartoes-gestao-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/cartoes_gestao}
+    username: ${DB_USER:cartoes}
+    password: ${DB_PASSWORD:cartoes}
+
+  jpa:
+    hibernate:
+      # Flyway é o dono do schema - Hibernate só valida.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        # Agrupa os lazy (cartão/categoria/parcelas da listagem de compras) em IN (...).
+        default_batch_fetch_size: 50
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8081}
+  # Devolve a mensagem das exceções no corpo de erro do /error (validação de parâmetro).
+  error:
+    include-message: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+# ⚠️ Default só para dev local. Em produção JWT_SECRET vem do .env da VPS (32+ bytes aleatórios).
+jwt:
+  secret: ${JWT_SECRET:dev-only-secret-troque-isso-em-producao-cartoes-1234567890}
+  # 7 dias: uso pessoal, quase sempre no próprio celular/computador. O frontend renova o
+  # token enquanto o app está em uso.
+  expiracao-ms: 604800000

@@ -1,0 +1,35 @@
+# Infra LOCAL de desenvolvimento. Portas diferentes do Commander (Postgres 5433, API 8081)
+# para os dois sistemas rodarem juntos na mesma máquina.
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cartoes
+      POSTGRES_PASSWORD: cartoes
+      POSTGRES_DB: cartoes_gestao
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cartoes -d cartoes_gestao"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # O backend roda fora do compose (`mvn spring-boot:run`). BACKEND_URL é build ARG (o
+  # Next grava o destino do proxy /api no build) - mudar exige `docker compose build frontend`.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8081}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+
+volumes:
+  postgres_data:
