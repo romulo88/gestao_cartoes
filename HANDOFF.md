@@ -125,3 +125,14 @@ Romulo: recadastrar tudo no sistema novo, sem importar a planilha).
 - Componente `components/seletor-categoria.tsx`; as telas recarregam a lista
   (`useDadosBase().recarregar`) para os filtros e os outros formulários verem a nova.
 - Só frontend. Conferido no navegador (lançamento e recorrência).
+
+## v8 - categorias por cartão em rosca (19/11, pedido do Romulo: "gráfico pizza")
+
+- Painel ganhou a seção "Categorias por cartão": uma rosca por cartão com gasto na fatura do
+  mês escolhido (total no miolo; hover/toque numa fatia ou na legenda mostra valor e %).
+  Até 6 fatias: a partir da 6ª categoria, as menores viram "Outras (N)". Cor = cor da
+  categoria; "Sem categoria" cinza.
+- Só frontend: `RoscasPorCartao` em `components/graficos.tsx`, alimentada pelas faturas do
+  mês que o painel já buscava (o `PainelVisao` agora recebe `faturas` e deriva o hint daí).
+  Aparece também no link compartilhado (`/ver`).
+- Conferido no navegador: desktop (legenda ao lado) e celular (legenda embaixo, sem cortar).
